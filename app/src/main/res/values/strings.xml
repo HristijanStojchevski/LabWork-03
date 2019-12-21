@@ -3,4 +3,5 @@
     <string name="AppEntrance">Open Google Places</string>
     <string name="title_activity_google_places">Places</string>
     <string name="MapClick">openMap</string>
+    <string name="bankLookupBtn">Find Banks</string>
 </resources>
