@@ -61,7 +61,8 @@ public class UpdateNearBanksService extends IntentService {
             mapPlacesApiService = retrofit.create(MapPlacesApiService.class);
             LatLng locationLatLong = intent.getParcelableExtra("locationLatLong");
             getBanksUpdate(locationLatLong);
-            repeatTask = new Timer();
+            // My idea for the task
+             /* repeatTask = new Timer();
             repeatTask.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
@@ -70,18 +71,15 @@ public class UpdateNearBanksService extends IntentService {
                     //getBanksUpdate(latLng);
                 }
             },0,repeatInterval);
+            */
         }
     }
 
     private void getBanksUpdate(final LatLng latLng) {
-        /*float latitude = (float) latLng.latitude;
+        float latitude = (float) latLng.latitude;
         float longitude= (float) latLng.longitude;
-        List<Double> latlong = new ArrayList<Double>();
-        latlong.add(latLng.latitude);
-        latlong.add(latLng.longitude);
-        String concatenated = String.valueOf(latitude).concat(",").concat(String.valueOf(longitude));
-        String latlongi = latLng.latitude+","+latLng.longitude; */
-        Call<MapBanklist> call = mapPlacesApiService.getLocations(latLng, getString(R.string.google_maps_key),5000,"bank");
+        String latlongi = latLng.latitude+","+latLng.longitude;
+        Call<MapBanklist> call = mapPlacesApiService.getLocations(latlongi, getString(R.string.google_maps_key),5000,"bank");
         //Logger logger = new Logger();
         call.enqueue(new Callback<MapBanklist>() {
             @Override
@@ -91,27 +89,19 @@ public class UpdateNearBanksService extends IntentService {
                     return;
                 }
                 MapBanklist searchData = response.body();
-                GooglePlacesActivity.mMap.clear();
-                GooglePlacesActivity.mMap.addMarker(new MarkerOptions().position(GooglePlacesActivity.markerOnTheMove.getPosition()).title("My position"));
-                GooglePlacesActivity.mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                for(MapLocation location : searchData.result.data)
+                for(MapLocation location : searchData.result)
                 {
-                    /*String content = "";
-                    content+= "ID:" + location.getPlace_id() + "\n ";
-                    content+= "Name: " + location.getName() + "\n";
-                    content+= "Address: " + location.getAddress() + "\n";
-                    content+= "LongLat" + location.getLongitude() + "," + location.getLatitude() + "\n";
-                    content+= "URLimg:" + location.getIconUrl() + "\n";*/
-                    float lat = location.getLatitude();
-                    float lng = location.getLongitude();
+                    double lat = location.getGeometry().getLocation().getLatitude();
+                    double lng = location.getGeometry().getLocation().getLongitude();
                     String placeName = location.getName();
                     String vicinity = location.getAddress();
                     MarkerOptions markerOptions = new MarkerOptions();
                     LatLng latLng = new LatLng(lat,lng);
                     markerOptions.position(latLng);
                     markerOptions.title(placeName + " : " + vicinity);
-                    Marker m = GooglePlacesActivity.mMap.addMarker(markerOptions);
+                    // It would require static mMap or just public
                     markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                    //Marker m = GooglePlacesActivity.mMap.addMarker(markerOptions);
                     //logger.info(content);
                 }
             }
@@ -122,7 +112,6 @@ public class UpdateNearBanksService extends IntentService {
             }
         });
     }
-
     @Override
     public void onDestroy() {
         super.onDestroy();

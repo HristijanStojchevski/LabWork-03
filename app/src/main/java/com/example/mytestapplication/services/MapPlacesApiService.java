@@ -11,5 +11,5 @@ import java.util.List;
 
 public interface MapPlacesApiService {
     @GET("maps/api/place/nearbysearch/json")
-    Call<MapBanklist> getLocations(@Query("location") LatLng latlong, @Query("key") String apiKey, @Query("radius") int radius, @Query("types") String placeType);
+    Call<MapBanklist> getLocations(@Query(value = "location",encoded = true) String latlong, @Query("key") String apiKey, @Query("radius") int radius, @Query("types") String placeType);
 }

@@ -15,7 +15,6 @@ import android.os.Bundle;
 
 import com.example.mytestapplication.model.MapBanklist;
 import com.example.mytestapplication.model.MapLocation;
-import com.example.mytestapplication.model.MapLocationData;
 import com.example.mytestapplication.services.GeoTrackingService;
 import com.example.mytestapplication.services.MapPlacesApiService;
 import com.example.mytestapplication.services.UpdateNearBanksService;
@@ -26,7 +25,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.*;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -34,15 +32,14 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.logging.Logger;
 
 public class GooglePlacesActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
-    public static GoogleMap mMap;
+    private static GoogleMap mMap;
     private LocationManager locationManager;
-    public static Marker markerOnTheMove;
+    private Marker markerOnTheMove;
     private PlacesClient placesClient;
     private LocationCallback locationCallback;
     private LatLng currLocation;
@@ -126,28 +123,19 @@ public class GooglePlacesActivity extends FragmentActivity implements OnMapReady
     }
 
     private void startSearchBankService() {
-        LatLng currMarkerLoc = mMap.getCameraPosition().target;
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://maps.googleapis.com/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        mapPlacesApiService = retrofit.create(MapPlacesApiService.class);
         Intent startSearchService = new Intent(this, UpdateNearBanksService.class);
         currLocation = markerOnTheMove.getPosition();
         startSearchService.putExtra("locationLatLong", currLocation);
-        //getBanks();
-        startService(startSearchService);
+        getBanks();
+        /* run service on btn click... Plus the idea of getting new user location always and only updating the banks after 1min
+        mMap.clear();
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(currLocation));
+        startService(startSearchService); */
     }
 
     private void getBanks() {
-        float latitude = (float) currLocation.latitude;
-        float longitude= (float) currLocation.longitude;
-        List<Double> latlong = new ArrayList<Double>();
-        latlong.add(currLocation.latitude);
-        latlong.add(currLocation.longitude);
-        String concatenated = String.valueOf(latitude).concat(",").concat(String.valueOf(longitude));
-        String latlongi = currLocation.latitude+","+currLocation.longitude;
-        Call<MapBanklist> call = mapPlacesApiService.getLocations(currLocation, getString(R.string.google_maps_key),5000,"bank");
+        String latlongi = markerOnTheMove.getPosition().latitude+","+markerOnTheMove.getPosition().longitude;
+        Call<MapBanklist> call = mapPlacesApiService.getLocations(latlongi, getString(R.string.google_maps_key),5000,"bank");
         //Logger logger = new Logger();
         call.enqueue(new Callback<MapBanklist>() {
             @Override
@@ -157,29 +145,24 @@ public class GooglePlacesActivity extends FragmentActivity implements OnMapReady
                     return;
                 }
                 MapBanklist searchData = response.body();
+                if(searchData.getResult()!=null) {
+                    for (MapLocation place : searchData.getResult()) {
 
-                for(MapLocation location : searchData.result.data)
-                {
-                    /*String content = "";
-                    content+= "ID:" + location.getPlace_id() + "\n ";
-                    content+= "Name: " + location.getName() + "\n";
-                    content+= "Address: " + location.getAddress() + "\n";
-                    content+= "LongLat" + location.getLongitude() + "," + location.getLatitude() + "\n";
-                    content+= "URLimg:" + location.getIconUrl() + "\n";*/
-                    float lat = location.getLatitude();
-                    float lng = location.getLongitude();
-                    String placeName = location.getName();
-                    String vicinity = location.getAddress();
-                    MarkerOptions markerOptions = new MarkerOptions();
-                    LatLng latLng = new LatLng(lat,lng);
-                    markerOptions.position(latLng);
-                    markerOptions.title(placeName + " : " + vicinity);
-                    Marker m = mMap.addMarker(markerOptions);
-                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-                    //logger.info(content);
+                        double lat = place.getGeometry().getLocation().getLatitude();
+                        double lng = place.getGeometry().getLocation().getLongitude();
+                        String placeName = place.getName();
+                        String vicinity = place.getAddress();
+                        String iconUrl = place.getIconUrl();
+                        MarkerOptions markerOptions = new MarkerOptions();
+                        LatLng latLng = new LatLng(lat, lng);
+                        markerOptions.position(latLng);
+                        markerOptions.title(placeName + " : " + vicinity);
+                        // Zoshto prvo dodava marker pa setira stil na markerot..
+                        Marker m = mMap.addMarker(markerOptions);
+                        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                        //logger.info(content);
+                    }
                 }
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(markerOnTheMove.getPosition()));
-
             }
 
             @Override
@@ -196,6 +179,7 @@ public class GooglePlacesActivity extends FragmentActivity implements OnMapReady
         markerOnTheMove.setPosition(latLng);
         markerOnTheMove.setTitle("Personal pin");
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(markerOnTheMove.getPosition(), 12f));
+        getBanks();
     }
 
     @Override
@@ -220,7 +204,7 @@ public class GooglePlacesActivity extends FragmentActivity implements OnMapReady
                     0);
             return;
         }
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 0, this);
 
     }
     private boolean checkPermisions(){
